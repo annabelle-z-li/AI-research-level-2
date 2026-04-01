@@ -28,4 +28,9 @@ we already know that deepseek is great, but it still surprised me with its capab
 
 although this model was a pain in the butthole to use in google colab, it works pretty well. although its not very useful to me right now, ill make sure to remember that i have this tool in case it'll come in handy. 7/10.
 
+## creating spaces
+
+dino facts explorer
+
+i didn't actually create this space necessariy, i created it through another huggingface space called deepsite vibe coding. i simply prompted it to make a simple game where pressing a button will give the user a random dinosaur fact. while i was playing with the space it created, i was wondering whether the facts it gave was ai generated or not. so, i looked in the files myself and saw that it actually just had 25 dinosaur facts in the file script.js that it would repeat. in fact, the facts were actually a smaller part of the coding compared to the aesthetics of it all. there were hundreds of lines designing the animations, such as bonunce, float and shake all in the file style.css. there was also a lot of detail in the font colors and background designs, which was a nice touch. overall, i learned a lot from this experience!
 
