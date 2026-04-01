@@ -30,10 +30,14 @@ although this model was a pain in the butthole to use in google colab, it works 
 
 ## creating spaces
 
-dino facts explorer
+dino facts explorer https://huggingface.co/spaces/annabelle-li/dino-fact-explorers-fa8or
 
 i didn't actually create this space necessariy, i created it through another huggingface space called deepsite vibe coding. i simply prompted it to make a simple game where pressing a button will give the user a random dinosaur fact. while i was playing with the space it created, i was wondering whether the facts it gave was ai generated or not. so, i looked in the files myself and saw that it actually just had 25 dinosaur facts in the file script.js that it would repeat. in fact, the facts were actually a smaller part of the coding compared to the aesthetics of it all. there were hundreds of lines designing the animations, such as bonunce, float and shake all in the file style.css. there was also a lot of detail in the font colors and background designs, which was a nice touch. overall, i learned a lot from this experience!
 
-dictionary
+dictionary https://huggingface.co/spaces/annabelle-li/dictionary
 
 this was a long trial of errors on my part. it was just supposed to be a simple application that i could copy off of the build little worlds space in class, but my dumb ah forgot to put the lines "import gradio as gr" and "import requests". this led to a very long time of troubleshooting, basically trying everything to fix it when i have literally zero python experiemce ;(. eventually i just asked gemini and realized my mistake. this lesson has taught me to look at the source material more.
+
+silly phrase finder https://huggingface.co/spaces/annabelle-li/silly-phrase-finder/tree/main
+
+the space silly phrase finder was just something we did in class, and i had no part in creating it. however recently i saw that it wasn't running for some reason, and the error was very confusing. something about "init". my time with the dictionary space told me that its better if i just ask gemini, so i did. it said to just go to settings and reset the space. i subsequently followed its directions and the space is working again. yippee! this error has taught me that whenever i see an error that says "init" in it, just reset it.
