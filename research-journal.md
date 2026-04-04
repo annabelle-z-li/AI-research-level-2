@@ -41,3 +41,26 @@ this was a long trial of errors on my part. it was just supposed to be a simple 
 silly phrase finder https://huggingface.co/spaces/annabelle-li/silly-phrase-finder/tree/main
 
 the space silly phrase finder was just something we did in class, and i had no part in creating it. however recently i saw that it wasn't running for some reason, and the error was very confusing. something about "init". my time with the dictionary space told me that its better if i just ask gemini, so i did. it said to just go to settings and reset the space. i subsequently followed its directions and the space is working again. yippee! this error has taught me that whenever i see an error that says "init" in it, just reset it.
+
+## Week 4 — Classification vs. Generation
+
+### This Week's Big Idea
+classification classifies content, but generation creates it. classification needs labeled data. for generation, you could feed it anything and it can make stuff out of it simply through prediction.
+
+### The Demo
+distilgpt was very, very bad at answering the prompts. you could tell that none of the data it was being fed was labeled, because it chose its next word through places where they would find the words in your prompt. so if you gave it a math problem about eggs, it might just ramble about how to cook scrambled eggs from a recipe website.
+because classification is a simpler task for ai, i believe that this generation model was a lot less "smart". again, the classification models were fed human-made labeled data, which allowed them to output more accurate answers for human beings, but the generation model we looked at was just spouting algorithmic stuff, so it was kind of confusing and random. moreover, the generation models worked with parameters, temperature, and tokens, which is a whole other realm. 
+
+### How I Explored It
+(What classifier and generator did you try for homework? What inputs did you use? What did you find?)
+
+Classifier: https://huggingface.co/spaces/Nuno-Tome/simple_image_classifier
+Generator: https://huggingface.co/spaces/CohereLabs/c4ai-command
+
+The inputs I used were a totoro movie poster, which the classifier guessed as a comic, and the generator said was a movie poster for totoro, going into much more specifics. this was basically the same for the two other inputs.
+
+### The Training Data Connection
+Classification models use labels created from humans, which takes more time and is hard to scale. However, generation doesn't need humans to label anything, so you can train it on anything, which exists in millions of tokens.
+
+### What I Want to Try Next
+i would like to work with more songs, which generation would be better for. classification might be better for medical images.
