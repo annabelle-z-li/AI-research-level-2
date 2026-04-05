@@ -52,9 +52,9 @@ distilgpt was very, very bad at answering the prompts. you could tell that none 
 because classification is a simpler task for ai, i believe that this generation model was a lot less "smart". again, the classification models were fed human-made labeled data, which allowed them to output more accurate answers for human beings, but the generation model we looked at was just spouting algorithmic stuff, so it was kind of confusing and random. moreover, the generation models worked with parameters, temperature, and tokens, which is a whole other realm. 
 
 ### How I Explored It
-(What classifier and generator did you try for homework? What inputs did you use? What did you find?)
 
 Classifier: https://huggingface.co/spaces/Nuno-Tome/simple_image_classifier
+
 Generator: https://huggingface.co/spaces/CohereLabs/c4ai-command
 
 The inputs I used were a totoro movie poster, which the classifier guessed as a comic, and the generator said was a movie poster for totoro, going into much more specifics. this was basically the same for the two other inputs.
