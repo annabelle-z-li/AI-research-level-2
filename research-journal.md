@@ -104,12 +104,15 @@ I already saw how the models I've been using to help with music transcription ar
 For Space 2 I want to build an AMT Accuracy Tester Space — one that makes the experiment in your research question runnable by anyone, not just me. Concretely it would:
 
 Let the user upload a test audio clip and a reference MIDI file (the known ground truth)
-Run Basic Pitch on the audio automatically
-Compare the output MIDI against the reference MIDI across your four dimensions:
+
+Run Basic Pitch on the audio automatically and compare the output MIDI against the reference MIDI across your four dimensions:
 
 Pitch: % of correct pitches detected
+
 Timing: average onset error in milliseconds
+
 Rhythm: whether note durations match the reference
+
 Dynamics: whether soft notes were dropped
 
 Display a simple scorecard showing which dimensions passed and which failed
