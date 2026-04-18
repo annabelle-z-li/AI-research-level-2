@@ -98,7 +98,6 @@ In class, we talked about developing a research question. While I was listening,
 How do the architectural and computational constraints of AI music transcription models affect their ability to accurately represent the full range of musical information — including pitch, rhythm, dynamics, and instrumentation — and what are the implications for making these tools accessible and useful in real musical contexts?
 
 ### What I Want to Build Next
-(How does this question connect to my Spaces? What should Space 2 test?)
 I already saw how the models I've been using to help with music transcription are actually really bad at music. There are several reasons for this: (1) lack of large openly available datasets for training and evaluation, (2) absence of commonly adopted benchmarks for comparing different methods, (3) limited incentives to attract researchers compared to other fields in AI, and (4) the inherent complexity of music signals. But I believe that one of the biggest things holding me back is my lightweight cpu, which is partly why the output for my first space was so terrible. So, for my research I want to look at these constraints and try to use them to test their musical information, and also think about what would a real musician need? 
 
 For Space 2 I want to build an AMT Accuracy Tester Space — one that makes the experiment in your research question runnable by anyone, not just me. Concretely it would:
