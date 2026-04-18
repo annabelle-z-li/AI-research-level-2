@@ -85,3 +85,33 @@ in the mode opera: aria lyrics i upped the temperature all the way with the prom
 
 ### What I Want to Try Next
 what i want to try next is to customize it more, because right now its kind of boring with its black background and orange buttons.
+
+## Week 6 — Finding My Research Question
+
+### Where I Started
+I was interested in switching from just musical text generation that will only help musicians in the beginning of their journey in composing a song, to creating transcribing tools that can help any musician in the beginning of even well into their musical career. I also had noticed in my space work that the models that I was working with were not that good with musical terms or just music things in general. For example, when I tried to generate chord progression ideas, it just spouted a bunch of random chords that would probably sound terrible if played in real life.
+
+### What Happened in Class
+In class, we talked about developing a research question. While I was listening, I decided that simply researching about music with ai text generation was a bit mundane. So, I decided to switch to transcribing.
+
+### My Research Question (Current Version)
+How do the architectural and computational constraints of AI music transcription models affect their ability to accurately represent the full range of musical information — including pitch, rhythm, dynamics, and instrumentation — and what are the implications for making these tools accessible and useful in real musical contexts?
+
+### What I Want to Build Next
+(How does this question connect to my Spaces? What should Space 2 test?)
+I already saw how the models I've been using to help with music transcription are actually really bad at music. There are several reasons for this: (1) lack of large openly available datasets for training and evaluation, (2) absence of commonly adopted benchmarks for comparing different methods, (3) limited incentives to attract researchers compared to other fields in AI, and (4) the inherent complexity of music signals. But I believe that one of the biggest things holding me back is my lightweight cpu, which is partly why the output for my first space was so terrible. So, for my research I want to look at these constraints and try to use them to test their musical information, and also think about what would a real musician need? 
+
+For Space 2 I want to build an AMT Accuracy Tester Space — one that makes the experiment in your research question runnable by anyone, not just me. Concretely it would:
+
+Let the user upload a test audio clip and a reference MIDI file (the known ground truth)
+Run Basic Pitch on the audio automatically
+Compare the output MIDI against the reference MIDI across your four dimensions:
+
+Pitch: % of correct pitches detected
+Timing: average onset error in milliseconds
+Rhythm: whether note durations match the reference
+Dynamics: whether soft notes were dropped
+
+Display a simple scorecard showing which dimensions passed and which failed
+
+This goes more into the specifics in which musical aspects AI transcription models usually fail in.
