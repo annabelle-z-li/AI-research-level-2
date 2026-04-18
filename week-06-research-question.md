@@ -2,7 +2,7 @@
 
 ## Observation
 
-blabla
+After I made an AI music transcription huggingface space, I observed that it was not accurate at all, partly because i was using a lightweight cpu. I also noticed how it was better at pitch than timing. I read an article about it and I learned more. 
 
 ## Prompt
 
