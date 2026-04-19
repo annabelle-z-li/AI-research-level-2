@@ -115,3 +115,48 @@ For Space 2 I want to build an AMT Accuracy Tester Space — one that makes the 
 4. Dynamics: whether soft notes were dropped
 
 Finally, it would display a simple scorecard showing which dimensions passed and which failed. This goes more into the specifics in which musical aspects AI transcription models usually fail in, effectively allowing me to explore my research question more deeply.
+
+# 🎼 Music Transcription Space
+
+**Overview:** Takes an audio recording (uploaded file or microphone input) and transcribes it into sheet music, producing three outputs: a MIDI file, a MusicXML file, and an inline SVG score viewer.
+
+---
+
+## Tech Stack
+
+| Component | Role |
+|-----------|------|
+| `basic_pitch` (Spotify) | Audio-to-MIDI inference via pre-bundled ONNX model |
+| `music21` | MIDI parsing, quantization, and MusicXML conversion |
+| `LilyPond` | External binary for rendering the score as SVG pages |
+| `Gradio 4/5` | UI framework (includes monkeypatch for known schema bug) |
+
+---
+
+## Features
+
+- **Audio input:** supports file upload or microphone recording
+- **Sheet music viewer:** inline SVG rendered from LilyPond, with graceful fallback if LilyPond is unavailable
+- **Downloads:** MIDI and MusicXML files for use in notation software like MuseScore
+
+---
+
+## Limitations
+
+- Best results on **single-instrument audio** (piano, guitar, voice)
+- Recordings should be **under 2 minutes** on CPU-tier hardware
+- SVG score viewer **requires LilyPond** to be installed on the Space
+
+---
+
+## Pipeline
+
+\```
+Audio Input
+    ↓
+basic_pitch (ONNX) → MIDI
+    ↓
+music21 → Quantized Score → MusicXML
+    ↓
+LilyPond → SVG pages → Inline HTML viewer
+\```
