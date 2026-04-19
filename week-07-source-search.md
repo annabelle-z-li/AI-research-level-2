@@ -69,8 +69,7 @@
 **Extract (from search results / Semantic Scholar):**
 > "The capability of transcribing music audio into musicnotation is a fascinating example of human intelligence. It involves perception (analyzing complex auditory scenes), cognition (recognizing musical objects), knowledge representation (forming musical structures) and inference (testing alternative hypotheses). Automatic Music Transcription (AMT), i.e., the design of computational algorithms to convert acoustic music signals into some form of music notation, is a challenging task in signal processing and artificial intelligence. It comprises several subtasks, including (multi-)pitch estimation, onset and offset detection, instrument recognition, beat and rhythm tracking, interpretation of expressive timing and dynamics, and score typesetting. Given the number of subtasks it comprises and its wide application range, it is considered a fundamental problem in the fields of music signal processing and music information retrieval (MIR)"
 
-**URL:** https://qmro.qmul.ac.uk/xmlui/bitstream/handle/123456789/54987/Benetos%20Automatic%20Music%20Transcription%202019%20Accepted.pdf?sequence=1
-*(Note: the PDF at this URL returned empty content during retrieval — use the QMUL repository link or Semantic Scholar as backup: https://www.semanticscholar.org/paper/Automatic-Music-Transcription%3A-An-Overview-Benetos-Dixon/b0a4c24d1bc96d71402fc8668a823c43d8bc47dc)*
+**URL:** https://labsites.rochester.edu/air/publications/benetatos19automaticmusic.pdf
 
 **Why it's on the shortlist:** This 2019 overview paper explicitly states that MIDI is not the same as notation — that beat, bar, meter, key, and harmony are absent from MIDI — which is exactly what my pipeline gets wrong when it tries to go from MIDI to sheet music without beat tracking or meter detection.
 
