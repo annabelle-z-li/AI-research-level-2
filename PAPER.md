@@ -76,7 +76,9 @@ The tool is also likely to perform worst for exactly the musicians who might nee
 
 4. **Gardner et al. — MT3: Multi-Task Multitrack Music Transcription (Google Magenta, 2022)** — describes the GPU-based transformer model that represents the current state of the art in music transcription. Useful for explaining *why* the CPU constraint matters and what a better model looks like architecturally. Available at `arxiv.org/abs/2111.03017`.
 
-5. **The arxiv paper you linked (2603.27528)** — once accessible, this should be read for its specific claims about current AMT limitations and used to ground the research question. *[Note: this paper could not be retrieved during drafting due to access limits. Add its specific claims and citation once you have read it.]*
+5. **An AI Approach to Automatic Natural Music Transcription** — describes the distinction between acoustic modeling (detecting pitches from audio) and score generation (converting raw pitch data into natural-looking notation) — this directly explains why my pipeline fails even when Basic Pitch detects pitches reasonably well.
+
+6. **Automatic Music Transcription: An Overview** — explicitly states that MIDI is not the same as notation — that beat, bar, meter, key, and harmony are absent from MIDI — which is exactly what my pipeline gets wrong when it tries to go from MIDI to sheet music without beat tracking or meter detection.
 
 ---
 
