@@ -42,6 +42,51 @@ silly phrase finder https://huggingface.co/spaces/annabelle-li/silly-phrase-find
 
 the space silly phrase finder was just something we did in class, and i had no part in creating it. however recently i saw that it wasn't running for some reason, and the error was very confusing. something about "init". my time with the dictionary space told me that its better if i just ask gemini, so i did. it said to just go to settings and reset the space. i subsequently followed its directions and the space is working again. yippee! this error has taught me that whenever i see an error that says "init" in it, just reset it.
 
+# 🎼 Music Transcription Space
+
+**Overview:** Takes an audio recording (uploaded file or microphone input) and transcribes it into sheet music, producing three outputs: a MIDI file, a MusicXML file, and an inline SVG score viewer.
+
+---
+
+## Tech Stack
+
+| Component | Role |
+|-----------|------|
+| `basic_pitch` (Spotify) | Audio-to-MIDI inference via pre-bundled ONNX model |
+| `music21` | MIDI parsing, quantization, and MusicXML conversion |
+| `LilyPond` | External binary for rendering the score as SVG pages |
+| `Gradio 4/5` | UI framework (includes monkeypatch for known schema bug) |
+
+---
+
+## Features
+
+- **Audio input:** supports file upload or microphone recording
+- **Sheet music viewer:** inline SVG rendered from LilyPond, with graceful fallback if LilyPond is unavailable
+- **Downloads:** MIDI and MusicXML files for use in notation software like MuseScore
+
+---
+
+## Limitations
+
+- Best results on **single-instrument audio** (piano, guitar, voice)
+- Recordings should be **under 2 minutes** on CPU-tier hardware
+- SVG score viewer **requires LilyPond** to be installed on the Space
+
+---
+
+## Pipeline
+
+\```
+Audio Input
+    ↓
+basic_pitch (ONNX) → MIDI
+    ↓
+music21 → Quantized Score → MusicXML
+    ↓
+LilyPond → SVG pages → Inline HTML viewer
+\```
+
 ## Week 4 — Classification vs. Generation
 
 ### This Week's Big Idea
@@ -116,47 +161,153 @@ For Space 2 I want to build an AMT Accuracy Tester Space — one that makes the 
 
 Finally, it would display a simple scorecard showing which dimensions passed and which failed. This goes more into the specifics in which musical aspects AI transcription models usually fail in, effectively allowing me to explore my research question more deeply.
 
-# 🎼 Music Transcription Space
+# Research Entry: Music Transcription Space — Transcription Quality Issues
 
-**Overview:** Takes an audio recording (uploaded file or microphone input) and transcribes it into sheet music, producing three outputs: a MIDI file, a MusicXML file, and an inline SVG score viewer.
-
----
-
-## Tech Stack
-
-| Component | Role |
-|-----------|------|
-| `basic_pitch` (Spotify) | Audio-to-MIDI inference via pre-bundled ONNX model |
-| `music21` | MIDI parsing, quantization, and MusicXML conversion |
-| `LilyPond` | External binary for rendering the score as SVG pages |
-| `Gradio 4/5` | UI framework (includes monkeypatch for known schema bug) |
+**Date:** 2026-04-18
+**Space:** Music to Sheet Music (basic_pitch + music21 + LilyPond)
+**Status:** Known limitation — not a bug, but a structural accuracy ceiling
 
 ---
 
-## Features
+## Problem Summary
 
-- **Audio input:** supports file upload or microphone recording
-- **Sheet music viewer:** inline SVG rendered from LilyPond, with graceful fallback if LilyPond is unavailable
-- **Downloads:** MIDI and MusicXML files for use in notation software like MuseScore
+The transcription output is broadly inaccurate across multiple dimensions simultaneously:
 
----
+- Pitches are wrong
+- Clef assignment is wrong
+- Rhythms are wrong
+- Time signature is wrong or missing
 
-## Limitations
-
-- Best results on **single-instrument audio** (piano, guitar, voice)
-- Recordings should be **under 2 minutes** on CPU-tier hardware
-- SVG score viewer **requires LilyPond** to be installed on the Space
+This is not a single failure but a cascade of compounding errors across the full pipeline.
 
 ---
 
-## Pipeline
+## Pipeline Audit
 
-\```
-Audio Input
-    ↓
-basic_pitch (ONNX) → MIDI
-    ↓
-music21 → Quantized Score → MusicXML
-    ↓
-LilyPond → SVG pages → Inline HTML viewer
-\```
+### Stage 1: `basic_pitch` (audio → MIDI)
+
+**What it does:** Uses a neural network (ONNX model from Spotify's ICASSP 2022 paper) to detect pitches from raw audio and output a MIDI file.
+
+**Known limitations:**
+
+- Designed primarily for **monophonic or lightly polyphonic** single-instrument audio. Complex recordings (chords, harmonics, reverb, multiple voices) cause false positives and missed notes.
+- **Pitch detection accuracy degrades** on:
+  - Vocals with heavy vibrato or ornamentation
+  - Instruments with strong overtones (e.g., piano, guitar) — overtones can be misread as pitches
+  - Audio with background noise or reverb
+  - Very high or very low registers near the model's trained range
+- The model outputs **continuous pitch probabilities**, not discrete note events. The conversion to MIDI note-on/note-off events involves a thresholding step that can create spurious notes or drop real ones.
+- `basic_pitch` was trained on relatively clean studio recordings. Microphone input or recordings with room noise will perform worse.
+
+**Likely cause of pitch errors:** The model is picking up overtones, noise artifacts, or bleed from other frequencies as separate pitches.
+
+---
+
+### Stage 2: `music21` quantization (MIDI → score)
+
+**What it does:** Parses the MIDI file, quantizes note durations to a rhythmic grid, and converts to a music21 `Score` object.
+
+```python
+score = music21.converter.parse(midi_path)
+score = score.quantize(quarterLengthDivisors=(4,))
+```
+
+**Known limitations:**
+
+- `quarterLengthDivisors=(4,)` means the smallest rhythmic unit is a **sixteenth note**. Any rhythmic content finer than that (e.g., triplets, grace notes, syncopation) gets snapped to the nearest sixteenth — often creating incorrect rhythms.
+- MIDI has no concept of meter or time signature. `music21` infers these from the MIDI tempo track, which `basic_pitch` may not write accurately or at all.
+- If `basic_pitch` outputs MIDI without a reliable tempo/meter track, `music21` will fall back to a default time signature (often 4/4) regardless of the actual meter of the source audio.
+- The quantization step has no knowledge of musical context — it cannot distinguish between an intentional dotted rhythm and a slightly off-beat note that should be straight.
+- **Clef assignment** is automatic based on pitch range of detected notes. If `basic_pitch` outputs phantom high or low pitches, `music21` may assign the wrong clef.
+
+**Likely cause of rhythm and time signature errors:** The pipeline has no beat tracking or tempo analysis step. It goes directly from audio → MIDI → quantization with no intermediate meter detection.
+
+---
+
+### Stage 3: LilyPond rendering (score → SVG)
+
+**What it does:** Takes the music21 score, writes a `.ly` file, and renders it to SVG.
+
+**Known limitations:**
+
+- LilyPond renders faithfully whatever it receives — it does not correct or interpret. If the score object from music21 is wrong, the SVG will be wrong.
+- No errors at this stage contribute to the transcription inaccuracy itself.
+
+---
+
+## Root Cause Summary
+
+| Error Type | Root Cause | Stage |
+|------------|-----------|-------|
+| Wrong pitches | Overtone/noise misidentification | `basic_pitch` |
+| Wrong clef | Phantom pitches skew range | `music21` |
+| Wrong rhythms | No beat tracking; coarse quantization | `basic_pitch` + `music21` |
+| Wrong time signature | No meter detection in pipeline | `music21` |
+
+---
+
+## What Is Missing From the Pipeline
+
+The current pipeline skips two critical music information retrieval (MIR) steps:
+
+1. **Beat tracking / tempo analysis** — needed before quantization so the rhythmic grid aligns to actual beats in the audio
+2. **Meter detection** — needed to correctly assign time signatures
+
+Libraries that could fill these gaps:
+
+| Library | Purpose |
+|---------|---------|
+| `librosa` | Beat tracking (`librosa.beat.beat_track`), onset detection, tempo estimation |
+| `madmom` | High-accuracy beat tracking, downbeat detection, key/meter detection |
+| `pretty_midi` | Better MIDI manipulation between basic_pitch output and music21 input |
+
+---
+
+## Potential Fixes (Ranked by Complexity)
+
+### Fix 1 — Improve audio input quality (low effort, partial fix)
+- Add guidance in the UI for users to record clean, dry, single-instrument audio
+- Recommend headphone use when recording via microphone to reduce bleed
+- Add a loudness normalization step before passing audio to `basic_pitch`
+
+### Fix 2 — Add `librosa` beat tracking before quantization (medium effort)
+- Run `librosa.beat.beat_track()` on the original audio to get a BPM estimate
+- Write that BPM into the MIDI tempo track before passing to `music21`
+- Use the detected tempo to set a smarter quantization grid
+
+```python
+import librosa
+tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
+# Write tempo into MIDI, then pass to music21
+```
+
+### Fix 3 — Add onset detection to clean up `basic_pitch` output (medium effort)
+- Use `librosa.onset.onset_detect()` to get note onset times
+- Filter or align `basic_pitch` note events to those onsets
+- Reduces spurious notes caused by overtone detection
+
+### Fix 4 — Replace `basic_pitch` with a higher-accuracy AMT model (high effort)
+- `MT3` (Magenta) — multi-instrument transcription, significantly more accurate but requires GPU
+- `piano_transcription` (Kong et al.) — state-of-the-art for piano specifically, CPU-compatible
+- These are larger models and may not fit in a free-tier Hugging Face CPU Space
+
+### Fix 5 — Add a post-processing correction layer (high effort)
+- After generating the score, prompt an LLM with the MusicXML and ask it to detect and correct obvious errors
+- Experimental but potentially powerful for a Space already in the HuggingFace/AI ecosystem
+
+---
+
+## Notes for Future Iterations
+
+- `basic_pitch` was never designed to be a full automatic music transcription (AMT) system — it is a pitch detection tool. The current Space is asking it to do more than it was built for.
+- The free-tier CPU constraint rules out the most accurate models, which are GPU-dependent.
+- A realistic quality ceiling on CPU with current open-source tools is: accurate pitch detection on clean, monophonic, sustained-note audio (e.g., a simple vocal melody, a whistled tune, a single flute line). Anything more complex will require GPU resources or a commercial API.
+
+---
+
+## References
+
+- Bitteur et al., *basic_pitch* — https://github.com/spotify/basic-pitch
+- Cuthbert & Ariza, *music21* — https://web.mit.edu/music21/
+- McFee et al., *librosa* — https://librosa.org
+- Kong et al., *High-resolution Piano Transcription with Pedals by Regressing Onset and Offset Times* (2021)
