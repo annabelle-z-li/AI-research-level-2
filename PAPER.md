@@ -44,6 +44,7 @@ All three tests were run using Basic Pitch (ONNX backend) on the free CPU tier, 
 
 *What this shows:* Even the simplest possible input — eight notes, all the same duration, no harmony — produces rhythm errors. The pitch contour survives; the rhythmic structure does not. This is consistent with what the pipeline audit predicted: Basic Pitch detects where pitches occur but does not track beat or meter, so music21 has nothing to work from when it assigns durations.
 
+![C Major Scale](https://1drv.ms/i/c/a873fbc645f5eae6/IQC_fnqitRHQQZ7UWHnkhCtTAVMA7SHC-FXnKGzQqsejTm0?e=1PXVCo)
 ---
 
 **Test 2: Twinkle Twinkle Little Star**
