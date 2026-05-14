@@ -44,7 +44,9 @@ All three tests were run using Basic Pitch (ONNX backend) on the free CPU tier, 
 
 *What this shows:* Even the simplest possible input — eight notes, all the same duration, no harmony — produces rhythm errors. The pitch contour survives; the rhythmic structure does not. This is consistent with what the pipeline audit predicted: Basic Pitch detects where pitches occur but does not track beat or meter, so music21 has nothing to work from when it assigns durations.
 
-![C Major Scale](https://1drv.ms/i/c/a873fbc645f5eae6/IQC_fnqitRHQQZ7UWHnkhCtTAVMA7SHC-FXnKGzQqsejTm0?e=1PXVCo)
+![C major scale output from Music to Sheet Music](https://raw.githubusercontent.com/annabelle-z-li/AI-research-level-2/main/assets/scale-output.png)
+*Figure 1: Actual output from Music to Sheet Music for a C major scale. The ascending contour is loosely visible, but rhythm errors appear throughout — including an unexplained half note at the start, dotted rhythms mid-scale, and a grace note cluster in the final measure.*
+
 ---
 
 **Test 2: Twinkle Twinkle Little Star**
@@ -55,6 +57,9 @@ All three tests were run using Basic Pitch (ONNX backend) on the free CPU tier, 
 
 This is the output that most clearly illustrates the overtone problem. The model is not hallucinating pitches at random — it is detecting the real overtones produced by the instrument and treating each partial as a separate simultaneous note. The result looks like a dense piano reduction of something that was originally a single melodic line. As a musician, looking at this score, there is no way to identify it as *Twinkle Twinkle* without being told. The melody is completely buried.
 
+![Twinkle Twinkle Little Star output from Music to Sheet Music](https://raw.githubusercontent.com/annabelle-z-li/AI-research-level-2/main/assets/twinkle-output.png)
+*Figure 2: Actual output from Music to Sheet Music for Twinkle Twinkle Little Star. Three pages of dense chord clusters where a single melodic line should appear. Overtones are being read as simultaneous pitches, completely burying the melody.*
+
 *What this shows:* When audio contains any resonance or sustain — which almost all real recordings do — Basic Pitch multiplies every note into a chord. The more resonant the instrument, the worse the output. This is not a quantization error or a rhythm error. It is a fundamental misunderstanding of what "a note" means in musical context.
 
 ---
@@ -64,6 +69,9 @@ This is the output that most clearly illustrates the overtone problem. The model
 *Prompt (audio input):* A performance of Bach's Minuet in G, a piece with clear phrase structure, a recognizable melody, and a moderate tempo in 3/4 time.
 
 *Output:* Four pages of notation. The same chord cluster problem from Twinkle Twinkle appears here, but worse — almost every beat has four to six stacked notes. The time signature defaults to common time (4/4), not 3/4, which means the bar lines fall in the wrong places and the rhythmic groupings make no musical sense. There is no bass clef, despite this being a piano piece with a distinct left-hand part. The final system on the last page suddenly becomes nearly empty — just a few sparse notes — suggesting the model lost track of the audio entirely in the final phrase. Nothing about this output is performable or readable as the Minuet in G.
+
+![Minuet in G output from Music to Sheet Music](https://raw.githubusercontent.com/annabelle-z-li/AI-research-level-2/main/assets/minuet-output.png)
+*Figure 3: Actual output from Music to Sheet Music for the Minuet in G. Four pages of output with pervasive chord clusters, 4/4 instead of 3/4, no bass clef, and a nearly empty final system where the model appears to have lost track of the audio entirely.*
 
 *What this shows:* The failure is not just worse for more complex music — it is categorically different. With the scale, the pitch contour survived even if the rhythm failed. With the Minuet, even the contour is unrecognizable. The interaction between overtone multiplication, wrong meter, and missing bass clef produces output that has no relationship to the input a musician could identify.
 
