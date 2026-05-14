@@ -20,7 +20,7 @@ That observation pushed me toward a deeper question: is this just a bug I can fi
 
 ## 3. Why This Matters to Me
 
-I have been studying music seriously for several years. I have gone through NYSSMA (New York State School Music Association) evaluations, which involve sight-singing — reading and performing music you have never seen before, in real time, with attention to pitch, rhythm, dynamics, and phrasing. That training gave me a specific standard for what accurate musical notation looks like and what it feels like to read and perform from a score.
+I have been studying music seriously for several years, including NYSSMA (New York State School Music Association) evaluations, which involve sight-singing — reading and performing music you have never seen before, in real time, with attention to pitch, rhythm, dynamics, and phrasing. That training gave me a specific standard for what accurate musical notation looks like and what it feels like to read and perform from a score. In sight-singing, you have to look at a piece of notation and immediately translate it into sound — which means you are very aware, at a glance, when a score is unreadable. You know when the rhythm makes no sense and when the pitches fall outside any logical key.
 
 When I looked at the output of my Space, I was not just looking at a file. I was reading it the way I would read any piece of music before performing it. And what I saw was not usable. The rhythms did not make musical sense. Notes that should have been grouped as quarter notes or dotted rhythms were smeared into strange durations. The time signature, which tells a performer how to feel the beat and count the measure, was either absent or wrong. A musician trying to perform from this output would be more confused than helped.
 
@@ -30,25 +30,56 @@ My earlier work in this class also pointed me here. When I was building Music St
 
 ## 4. What I Tried
 
-The clearest test I ran was examining the pipeline failure in detail — not by running a formal experiment, but by auditing each stage of the pipeline individually to understand where errors were introduced.
+I ran three audio recordings through the Space — a C major scale, *Twinkle Twinkle Little Star*, and the Minuet in G — chosen deliberately to represent increasing levels of musical complexity. The scale is the simplest possible input: monophonic, stepwise, no rhythmic ambiguity. Twinkle is a familiar melody that any transcription tool should handle. The Minuet in G is a real piece of repertoire with a clear phrase structure and recognizable harmonic motion. If the tool fails on all three, that tells us something important about the category of failure.
 
-**What I expected:** that the output would be imperfect but approximately correct — maybe a few wrong notes, some rhythm approximations, but broadly readable as sheet music.
+All three tests were run using Basic Pitch (ONNX backend) on the free CPU tier, with music21 handling MIDI-to-score conversion and LilyPond rendering the final SVG output.
 
-**What happened:** the errors were not minor approximations. They were systematic failures across every musical dimension:
+---
 
-| Musical Dimension | What Went Wrong | Pipeline Stage |
-|---|---|---|
-| Pitch | Overtones misread as separate notes; phantom pitches added | Basic Pitch (audio → MIDI) |
-| Clef | Wrong clef assigned because phantom pitches skewed the pitch range | music21 (MIDI → score) |
-| Rhythm | Note durations incorrect; no beat tracking before quantization | Basic Pitch + music21 |
-| Time signature | Defaulted to 4/4 regardless of actual meter | music21 (no meter detection) |
-| Dynamics | No velocity or dynamic information preserved | Basic Pitch model design |
+**Test 1: C Major Scale**
 
-The root cause of most of these errors is the same: **Basic Pitch was not designed to be a full automatic music transcription system**. It is a pitch detection tool. It detects where pitches occur in audio, but it does not understand meter, beat, or musical context. When music21 receives that raw pitch data and tries to turn it into notation, it has no beat tracking information to work from — so it guesses at rhythm by snapping everything to a sixteenth-note grid, and it guesses at time signature by defaulting to 4/4. The result is technically a score, but not a musical one.
+*Prompt (audio input):* A single-voice ascending C major scale, played cleanly on a melodic instrument.
 
-One specific failure that stood out: piano audio with strong overtones caused Basic Pitch to detect the overtones as separate pitches. This is a known limitation. As one researcher put it, Basic Pitch assessed the low sounds not as the struck note but as noise, omitting that pitch and instead selecting two of its overtones as the active pitches — ultimately transcribing a very different chord from the one was actually played.
+*Output:* The treble clef and common time signature were assigned correctly — the only test where the time signature was right. The ascending contour of the scale is loosely visible: the output does rise from lower to higher pitches in roughly the right direction. But the rhythm is wrong throughout. The first note was rendered as a half note instead of a quarter note. Dotted rhythms appear mid-scale where there should be uniform quarter notes. A tie appears with no musical justification. The final measure contains what looks like a grace note cluster. The scale is *recognizable* in the output, but it would not be performable from this score without already knowing what it was supposed to sound like.
 
-This is exactly what I observed. The model is not wrong about the frequencies it detects. It is wrong about what those frequencies *mean* musically.
+*What this shows:* Even the simplest possible input — eight notes, all the same duration, no harmony — produces rhythm errors. The pitch contour survives; the rhythmic structure does not. This is consistent with what the pipeline audit predicted: Basic Pitch detects where pitches occur but does not track beat or meter, so music21 has nothing to work from when it assigns durations.
+
+---
+
+**Test 2: Twinkle Twinkle Little Star**
+
+*Prompt (audio input):* A single-voice performance of *Twinkle Twinkle Little Star*, one of the most recognizable melodies in Western music.
+
+*Output:* Three pages of notation — for what should be a 16-bar melody that fits comfortably on one page. Almost every measure contains chord clusters with four or five notes stacked vertically, far below and above the expected pitch range of this melody. Rests appear mid-phrase with no musical logic. The time signature changes partway through the score. Notes drop into ledger line territory that makes no sense for a melody that sits entirely in the middle register.
+
+This is the output that most clearly illustrates the overtone problem. The model is not hallucinating pitches at random — it is detecting the real overtones produced by the instrument and treating each partial as a separate simultaneous note. The result looks like a dense piano reduction of something that was originally a single melodic line. As a musician, looking at this score, there is no way to identify it as *Twinkle Twinkle* without being told. The melody is completely buried.
+
+*What this shows:* When audio contains any resonance or sustain — which almost all real recordings do — Basic Pitch multiplies every note into a chord. The more resonant the instrument, the worse the output. This is not a quantization error or a rhythm error. It is a fundamental misunderstanding of what "a note" means in musical context.
+
+---
+
+**Test 3: Minuet in G**
+
+*Prompt (audio input):* A performance of Bach's Minuet in G, a piece with clear phrase structure, a recognizable melody, and a moderate tempo in 3/4 time.
+
+*Output:* Four pages of notation. The same chord cluster problem from Twinkle Twinkle appears here, but worse — almost every beat has four to six stacked notes. The time signature defaults to common time (4/4), not 3/4, which means the bar lines fall in the wrong places and the rhythmic groupings make no musical sense. There is no bass clef, despite this being a piano piece with a distinct left-hand part. The final system on the last page suddenly becomes nearly empty — just a few sparse notes — suggesting the model lost track of the audio entirely in the final phrase. Nothing about this output is performable or readable as the Minuet in G.
+
+*What this shows:* The failure is not just worse for more complex music — it is categorically different. With the scale, the pitch contour survived even if the rhythm failed. With the Minuet, even the contour is unrecognizable. The interaction between overtone multiplication, wrong meter, and missing bass clef produces output that has no relationship to the input a musician could identify.
+
+---
+
+**Summary table across all three tests:**
+
+| Musical Dimension | C Major Scale | Twinkle Twinkle | Minuet in G |
+|---|---|---|---|
+| Pitch contour | Roughly correct | Buried in overtone clusters | Unrecognizable |
+| Rhythm | Wrong throughout | Wrong throughout | Wrong throughout |
+| Time signature | Correct (4/4) | Changes mid-score | Wrong (4/4 instead of 3/4) |
+| Clef | Correct | Correct | Missing bass clef |
+| Dynamics | None preserved | None preserved | None preserved |
+| Readability | Barely | Not at all | Not at all |
+
+The pattern across all three outputs is consistent: rhythm fails in every case, dynamics are never preserved, and overtone multiplication gets worse as the audio gets more complex. The only dimension where the tool shows any success is pitch contour — and even that disappears for polyphonic or harmonically rich audio.
 
 ## 5. What I Learned
 
@@ -60,40 +91,17 @@ I also learned that the CPU constraint is not just a performance limitation — 
 
 ## 6. What Still Needs Work / Who It Might Fail For
 
-This paper is early-stage. The clearest limitation is that I have not yet run a controlled experiment. I have observed and documented errors, and I have audited the pipeline to understand where they come from — but I have not yet measured the errors quantitatively. I cannot currently say, for example, that pitch accuracy drops by X% when polyphony increases from one voice to three. That measurement is the goal of my next Space (an AMT Accuracy Tester), which will let users upload audio alongside a reference MIDI and see a scored comparison across pitch, timing, rhythm, and dynamics.
+This paper is grounded in three real tests, but those tests have clear limitations. I ran each audio file once, through one model, on one hardware tier. I cannot currently say whether the errors are consistent across repeated runs, whether different recordings of the same melody would produce different results, or whether the overtone problem is worse for some instruments than others. The next step is my planned AMT Accuracy Tester Space, which will let users upload audio alongside a reference MIDI and receive a scored comparison across pitch, timing, rhythm, and dynamics — turning these qualitative observations into quantitative measurements.
 
-A second limitation is that I only tested one model (Basic Pitch) on one hardware tier (CPU). I cannot say whether the same failures appear on GPU-based models, or whether they are specific to the lightweight architecture. That comparison is a later phase of this research.
+A second limitation is that all three of my test inputs were relatively simple Western tonal melodies. I chose them deliberately to set the bar low — if the tool cannot handle a C major scale or *Twinkle Twinkle*, that is a meaningful finding. But it also means I have not tested the tool on the inputs where it might do better (very clean monophonic recordings) or the inputs where it would certainly do worse (vocal music with vibrato, jazz with slides and bends, or music in non-Western tuning systems).
 
-The tool is also likely to perform worst for exactly the musicians who might need it most: those working with complex, polyphonic music — piano with full chord voicings, guitar with harmonics and overtones, or vocal music with heavy vibrato and ornamentation. Current AI lacks embodied cognition — it doesn't understand that a guitarist leans into a note to convey urgency, or releases pressure to create vulnerability. Until models incorporate performer gesture data and stylistic context, they'll remain pitch-accurate but expression-blind. Simple monophonic melodies — a whistled tune, a single flute line — will produce the best results. The musicians who most need help transcribing complex music are the ones the tool will help least.
+The tool is also likely to perform worst for exactly the musicians who might need it most: those working with complex, polyphonic music where harmony and counterpoint are the whole point. The Minuet in G test showed this clearly — a piece with two independent voices produced output with no readable relationship to either of them. Simple monophonic melodies produce the closest thing to a usable result. The musicians who most need help transcribing complex music are the ones the tool will help least.
 
 ## 7. Sources to Add or Cite
 
 1. **Bittner et al. — Basic Pitch (Spotify, ICASSP 2022)** — the original paper describing the model powering this Space. Available at `github.com/spotify/basic-pitch`. Essential citation for describing what the model was designed to do and what its known limitations are.
-
 2. **"Machine Learning Techniques in Automatic Music Transcription: A Systematic Survey" (arXiv 2406.15249)** — a 2024 survey of AMT methods that describes why notation-level transcription (producing readable sheet music) is significantly harder than MIDI-level transcription (detecting note events). Directly relevant to the gap this paper describes.
-
 3. **"Music's AI Problem, AI's Music Problem" — Journal of the American Musicological Society (2025)** — discusses how Basic Pitch handles overtones and misidentifies pitches in complex chords. Includes a direct analysis of Basic Pitch on a real musical example. Strong source for section 4.
-
 4. **Gardner et al. — MT3: Multi-Task Multitrack Music Transcription (Google Magenta, 2022)** — describes the GPU-based transformer model that represents the current state of the art in music transcription. Useful for explaining *why* the CPU constraint matters and what a better model looks like architecturally. Available at `arxiv.org/abs/2111.03017`.
-
 5. **An AI Approach to Automatic Natural Music Transcription** — describes the distinction between acoustic modeling (detecting pitches from audio) and score generation (converting raw pitch data into natural-looking notation) — this directly explains why my pipeline fails even when Basic Pitch detects pitches reasonably well.
-
 6. **Automatic Music Transcription: An Overview** — explicitly states that MIDI is not the same as notation — that beat, bar, meter, key, and harmony are absent from MIDI — which is exactly what my pipeline gets wrong when it tries to go from MIDI to sheet music without beat tracking or meter detection.
-
----
-
-## Revision Notes
-
-**Strongest parts of this draft:**
-- Section 4 (What I Tried) — the pipeline audit table is specific, accurate, and grounded in real work. This is the most original part of the paper.
-- Section 3 (Why This Matters) — the NYSSMA connection is genuine and gives you a real evaluative standard most students would not have. Keep this and make it more specific if you can.
-- The framing around accessibility vs. accuracy as a core tension — this is a real and interesting claim that goes beyond "the model was bad."
-
-**Parts that still need more evidence from you:**
-- Section 4 needs a concrete example from your own output — describe one specific moment where you looked at the sheet music viewer and saw something clearly wrong. What did it look like? What should it have looked like?
-- Section 5 would be stronger with one sentence about what you personally felt when you saw the output as a trained musician — not just what was wrong technically, but what it would mean for someone trying to use it.
-- The dynamics row in the table is thin — did you observe dynamics being missing, or is that inferred from the pipeline audit? Be honest about which is observed and which is inferred.
-
-**Parts that sound too generic and should be rewritten in your own words:**
-- The opening of Section 3 ("I have been studying music seriously for several years") — replace with something more specific, like the exact NYSSMA level you have done or a specific sight-singing experience.
-- The last paragraph of Section 6 — currently it cites a source about guitarists, but your Space is more relevant to voice or piano. Either find a more relevant source or describe your own observation of who the tool would fail for.
