@@ -420,12 +420,18 @@ I cleaned up the links on my Hugging Face profile and expanded my Collection by 
 My GitHub profile README (v1) is live here:
 [https://github.com/annabelle-z-li/AI-research-level-2/blob/main/README.md](https://github.com/annabelle-z-li/AI-research-level-2/blob/main/README.md)
 
-## Real Outputs Swapped into `PAPER.md` and What I Noticed
+## Real Outputs Swapped into PAPER.md and What I Noticed
 
-> ⏳ **To Do:** I haven't completed this step yet. Come back and fill in:
-> - What real outputs you swapped into `PAPER.md`
-> - What you noticed when you ran the real test (any surprises, errors, or interesting results?)
+I ran three audio files through Music to Sheet Music and replaced the placeholder examples in section 4 with the real outputs.
+For the C major scale, I created the audio and MIDI myself in MuseScore. For Twinkle Twinkle Little Star and the Minuet in G, I used pre-recorded files I found online.
+
+My first reaction to the scale output was actually surprise — the pitches were roughly right. The ascending contour was visible in the score, which felt like a small win. The rhythms were completely wrong (a random half note at the start, dotted rhythms where there should be uniform quarter notes), but the pitch information survived the pipeline. That was more than I expected.
+
+The other two were a different story. Twinkle Twinkle came out as three pages of dense chord clusters — a melody that should fit on one page, completely buried under overtones that Basic Pitch mistook for real notes. The Minuet in G was four pages of the same problem, but worse. Neither output had any recognizable relationship to the original melody. My reaction was straightforward: this is not usable.
+
+What I noticed across all three is that complexity is the breaking point. The scale — the simplest possible input — produced the only output where I could identify anything musical. As soon as the audio had more resonance or sustain, the overtone multiplication took over and the score became unreadable. That pattern ended up being the core finding I wrote into section 4.
 
 ## One Thing I Want to Fix or Extend Before Session 9
 
 I want to build an app in **Google AI Studio** that can do better music transcription than what I currently have running on Hugging Face. The goal is to see if a more capable model can handle transcription more accurately and reliably.
+
