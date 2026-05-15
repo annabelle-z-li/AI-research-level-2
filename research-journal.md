@@ -435,3 +435,30 @@ What I noticed across all three is that complexity is the breaking point. The sc
 
 I want to build an app in **Google AI Studio** that can do better music transcription than what I currently have running on Hugging Face. The goal is to see if a more capable model can handle transcription more accurately and reliably.
 
+# Week 09 Journal Entry — May 14, 2026
+
+## AMT Report Card Space
+
+I launched a new Hugging Face Space called AMT Report Card ([→ View on Hugging Face](https://huggingface.co/spaces/annabelle-li/amt-report-card)). Instead of just looking at the sheet music output and saying "this looks wrong," the Space actually scores the transcription across four dimensions — pitch, timing, rhythm, and dynamics — and then asks Claude to review the scorecard like a musician would. It's meant to make my research question runnable by anyone, not just me.
+
+## Examples I Tested
+
+I ran three examples through the Space:
+
+- **C major scale** — the simplest possible input: a clean, ascending single-instrument scale
+- **Twinkle Twinkle Little Star** — a simple melody but with more sustain and resonance than the scale
+- **Minuet in G** — a more complex piece with multiple voices and harmonic content
+
+## What Surprised Me
+
+The C major scale result genuinely surprised me. All the pitches came back accurate — which I did not expect given how badly the pipeline has performed on everything else. But the rhythm was completely wrong. A melody that should be all uniform quarter notes came back with incorrect durations. So the model can apparently detect *what* notes are there but not *how long* they last, even on the cleanest possible input. That's a really specific and interesting failure mode.
+
+Twinkle Twinkle Little Star and the Minuet in G were a different story — basically everything was wrong across pitch, rhythm, timing, and dynamics. Neither output had any recognizable relationship to the original. This matched what I saw when I tested those same pieces in my Music to Sheet Music Space during Week 8, so at least the results are consistent. The pattern across all three is the same one I identified before: complexity is the breaking point. The simpler the input, the more the model can salvage — but even on the simplest input, it only gets pitch right and fails on rhythm.
+
+## Citations — How Many Survived Verification
+
+All four Week 7 sources survived and are carried forward into `week-09-citations.md`. None were dropped. I also swapped the cited claim for Bereket & Shi (2017) from the acoustic modeling / score generation distinction to the note-fading observation from Section 7, which is more specific and more directly useful for the brief. DOIs for Benetos 2013 and Benetos 2019 still need to be clicked and confirmed before the brief is submitted.
+
+## What I Changed in My Paper
+
+I updated my GitHub README to reflect the AMT Report Card Space in both the Current Projects section and the What I'm Building Now section. The citation swap for Source 1 (Bereket & Shi) also sharpened the paper's argument — the note-fading claim is a more concrete illustration of the audio-to-notation gap than the general two-stage framing I had before, and it connects more directly to the specific failure modes I'm observing in my own testing.
