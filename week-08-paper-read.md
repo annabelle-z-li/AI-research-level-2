@@ -62,3 +62,29 @@ They use stochastic gradient descent (SGD) with 0.9 momentum — an optimizer th
 ### Step 7: Produce a piano roll
 
 After training, the model runs over every time frame in a song and outputs a probability per key. Aggregating these frame-by-frame predictions across the full audio produces a complete piano roll — which then feeds into their separate score generation module.
+
+## III. Read the results section YOURSELF
+
+### Summary
+
+The authors developed their CNN acoustic model through three iterative phases: fixing underfitting on a small dataset by reducing dropout and scaling up to 138 songs on a GPU, then tuning dropout rate and hidden unit count to reach a ~44% F1 baseline. A training plateau led them to experiment with learning rate decay schedules, where starting at 0.05 and halving every 10 epochs proved most effective on the validation set. A gap between their training F1 (~74%) and validation F1 (~44%) indicated overfitting, which they attribute to limited data diversity across only 6 composers and 138 songs. They also identified a note-fading artifact: the model tends to cut notes short because real piano audio naturally decays in volume before the note ends in the MIDI ground truth. Their proposed remedies include acquiring more MIDI data across a wider range of composers and generating synthetic training data to broaden the model's exposure to varied note patterns.
+
+### Notes
+
+- Dropout is a regularization tool that intentionally makes the network learn less precisely during training to prevent memorization. When you're already underfitting (the model hasn't learned enough), too much dropout makes the problem worse. Lowering it gave the model more capacity to actually pick up patterns.
+- F1-score is a single number that combines two metrics — precision and recall — into one balanced measure of a model's accuracy.
+F1-score is a single number that combines two metrics — precision and recall — into one balanced measure of a model's accuracy.
+
+Precision = of all the notes the model predicted were on, what fraction were actually on? (Are your positives trustworthy?)
+
+Recall = of all the notes that actually were on, what fraction did the model catch? (Are you missing things?)
+
+## IV. Read the limitations YOURSELF
+
+### Summary
+
+The main limitations of this paper fall into data, modeling, and scope concerns. The dataset is narrow, only 138 songs across 6 composers, and the resulting 30-point gap between training and validation F1 suggests the model overfit to those specific patterns rather than learning to generalize. Structurally, a mismatch between real piano audio (which fades in volume) and MIDI ground truth (which marks full note duration) causes the model to systematically cut notes short, and the entire pipeline is scoped exclusively to classical piano with no accommodation for other instruments or mixed ensembles. Finally, the lack of a direct benchmark against Sigtia et al. makes it difficult to assess how much the authors' approach actually advances the state of the art.
+
+### What claim from this paper would you actually cite in your brief, and what would it support?
+
+Bereket and Shi (2017) is a Stanford CS229 project that builds an end-to-end pipeline for automatic music transcription of classical piano audio, combining a CNN-based acoustic model with an HMM-based score generation module. The authors iteratively tuned their CNN through three phases: fixing underfitting, scaling to a full dataset on a GPU, and experimenting with learning rate decay schedules. This ultimately achieving ~44% F1 on their validation set before overfitting became a ceiling. Their most citable finding for your brief is a structural one: even a reasonably well-performing model systematically truncates note durations because real piano audio fades in volume before the MIDI ground truth ends, a mismatch that no amount of architectural tuning can fully resolve. The paper's main limitations are its narrow 138-song dataset, piano-only scope, and no direct benchmark against prior work. This means its results should be treated as a proof-of-concept rather than a definitive performance claim, but the note-fading observation concretely illustrates how the gap between acoustic signal and symbolic notation is a fundamental constraint on AMT usability, not just an engineering problem.
