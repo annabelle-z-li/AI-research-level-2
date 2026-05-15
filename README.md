@@ -53,12 +53,18 @@ This question came out of firsthand observation: after building a music transcri
 
 ## Spaces Explored
 
-| Space | Rating | Notes |
+| Space | Status | Notes |
 |-------|--------|-------|
-| [SongGeneration](https://huggingface.co/spaces/tencent/SongGeneration) | 9/10 | Impressively captured the emotional tone of a prompt without being told to |
+| [SongGeneration](https://huggingface.co/spaces/tencent/SongGeneration) | 9/10 — not pursuing | Impressively captured emotional tone without being told to; led me to the idea of music + AI, but generation isn't my focus |
+| [DiffRhythm](https://huggingface.co/spaces/ASLP-lab/DiffRhythm) | 4/10 — rejected | Fast generation but required `[mm:ss:ms]` timestamps for each lyric; not focusing on generation |
+| [Piano Transcriptor](https://huggingface.co/spaces/xGPU-Explorers/piano_trans) | Relevant | Uses librosa, directly relevant to what I'm studying |
+| [Midi Music Generator](https://huggingface.co/spaces/skytnt/midi-composer) | Relevant | Generates MIDI files — the same format my pipeline outputs |
+| [Music Descriptor](https://huggingface.co/spaces/m-a-p/Music-Descriptor) | Relevant | Analyzes music for genres, instruments, and emotions — useful for helping growing musicians |
+| [Music Genre Classifier](https://huggingface.co/spaces/ardneebwar/music-genre-classifier) | Relevant | Classifies music genres from audio — useful for music creation context |
+| [Giant Music Transformer](https://huggingface.co/spaces/asigalov61/Giant-Music-Transformer) | Relevant | Fast multi-instrumental music transformer — useful for music creativity |
+| [Music Arena Leaderboard](https://huggingface.co/spaces/ArtificialAnalysis/Music-Arena-Leaderboard) | Saved for later | Shows which generation model is best; Suno is #1 but generation isn't my current focus |
 | [Huggy](https://huggingface.co/spaces/ThomasSimonini/Huggy) | 7/10 | Cute but the physics were a bit seizure-y |
 | [Doodle Dash](https://huggingface.co/spaces/Xenova/doodle-dash) | 8/10 | More varied prompts than Google Quick Draw, less accurate guessing |
-| [DiffRhythm](https://huggingface.co/spaces/ASLP-lab/DiffRhythm) | 4/10 | Very tedious to use and produced a happy techno song from sad lyrics |
 | [Simple Image Classifier](https://huggingface.co/spaces/Nuno-Tome/simple_image_classifier) | — | Used for Week 4 classification vs. generation demo |
 | [C4AI Command](https://huggingface.co/spaces/CohereLabs/c4ai-command) | — | Used for Week 4 generation demo |
 
@@ -66,10 +72,12 @@ This question came out of firsthand observation: after building a music transcri
 
 ## Models Explored
 
-| Model | Rating | Notes |
+| Model | Status | Notes |
 |-------|--------|-------|
 | [DeepSeek-R1](https://huggingface.co/deepseek-ai/DeepSeek-R1) | 9.5/10 | On par with ChatGPT — impressive for an open-source model |
 | [all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) | 7/10 | Sentence transformer; painful to set up in Colab but works well |
+| [ACE-Step 1.5](https://huggingface.co/ACE-Step/Ace-Step1.5) | Saved for later | Best open-source music generation model; not my current focus |
+| [HeartMuLa-oss-3B](https://huggingface.co/HeartMuLa/HeartMuLa-oss-3B-happy-new-year) | Saved for later | Also a strong music generation model |
 
 ---
 
@@ -113,6 +121,14 @@ The central research artifact. Takes audio input (file upload or microphone) and
 Scores an AI music transcription against a reference MIDI across four dimensions — pitch, timing, rhythm, and dynamics — then asks an LLM to review the results like a musician would. Includes three built-in examples (C major scale, Twinkle Twinkle Little Star, Minuet in G) that reproduce the tests from the research brief. Also includes the beat tracking fix applied to the hypothesis MIDI before scoring.
 
 **Tech stack:** `basic_pitch` → `librosa` beat tracking → `music21` → Groq (LLaMA 3.3 70B) → radar chart + scorecard UI
+
+**Architecture:** Basic Pitch (ONNX, CPU-compatible) detects note events from audio → `music21` parses and quantizes the hypothesis MIDI → scores are computed against the reference MIDI across four dimensions → MusicXML is passed to Groq's LLaMA 3.3 70B for a musician's-eye review → results displayed as a letter-grade scorecard, radar chart, and sheet music viewer.
+
+**The constraint Music to Sheet Music hit:** The pipeline had no tempo information between Basic Pitch and music21 quantization. Without a detected BPM, music21 snapped note durations to an arbitrary default grid — meaning even when pitch detection was correct (as in the C major scale), the rhythmic output was meaningless.
+
+**The move:** Added `librosa.beat.beat_track()` to estimate BPM from the original audio, wrote that tempo into the hypothesis MIDI using `pretty_midi`, and passed the corrected MIDI to music21 so quantization ran against a beat-aligned grid.
+
+**The cost:** The fix added two new dependencies (`librosa`, `pretty_midi`) and a second audio-loading pass — adding overhead on an already slow CPU tier. More importantly, the rhythm output did not change. The failure appears to be upstream of tempo correction, likely in how Basic Pitch encodes note durations before meter is relevant. The fix is dead weight until the root cause is identified.
 
 ---
 
