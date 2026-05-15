@@ -462,3 +462,26 @@ All four Week 7 sources survived and are carried forward into `week-09-citations
 ## What I Changed in My Paper
 
 I updated my GitHub README to reflect the AMT Report Card Space in both the Current Projects section and the What I'm Building Now section. The citation swap for Source 1 (Bereket & Shi) also sharpened the paper's argument — the note-fading claim is a more concrete illustration of the audio-to-notation gap than the general two-stage framing I had before, and it connects more directly to the specific failure modes I'm observing in my own testing.
+
+# Week 10 Journal Entry — The Wall and the Move
+
+## What I Wanted to Build
+I wanted my Music to Sheet Music Space to score transcriptions more accurately across all four dimensions — pitch, timing, rhythm, and dynamics. After testing three examples in Week 9, the result that bothered me most was the C major scale: every pitch came back correct, but the rhythm was completely wrong. A scale that should be all uniform quarter notes came back with incorrect durations. I wanted to fix that specific failure before the brief was due.
+
+## What Space 2 Can Do
+My Music to Sheet Music Space takes an audio file and transcribes it into readable sheet music, producing three outputs: a MIDI file, a MusicXML file, and an inline SVG score viewer rendered by LilyPond. It also runs an AI analysis of the transcription using Groq. The three examples I've tested against it — C major scale, Twinkle Twinkle Little Star, and Minuet in G — are the same ones that revealed the rhythm failure mode I'm trying to fix.
+
+## The Wall I Hit
+Even on the simplest possible input — a clean, monophonic C major scale — the rhythm score was wrong. The problem is structural: the pipeline goes from audio to MIDI to quantization with no tempo information in between. music21 has no idea what the actual beat is, so it snaps note durations to an arbitrary default grid. The result is that even when Basic Pitch detects the right pitches, the rhythms are meaningless because they're measured against a beat that was never detected. No amount of tuning the model fixes this — it's a missing step in the pipeline.
+
+## The Move I Chose
+I added librosa beat tracking between the Basic Pitch output and the music21 quantization step. The fix runs `librosa.beat.beat_track()` on the original audio to get a BPM estimate, writes that tempo into the MIDI file using pretty_midi, and then passes the corrected MIDI to music21 so that quantization happens against a grid actually aligned to the real beats in the recording. I applied the same fix to both the Music to Sheet Music Space and the AMT Report Card Space.
+
+## What Changed When I Tried the Move
+Nothing. The rhythm score on the C major scale stayed the same. The fix ran without errors — beat tracking didn't crash, pretty_midi wrote the tempo, music21 parsed the corrected MIDI — but the output was identical. The rhythm was still wrong.
+
+## What the Move Costs
+The fix adds two new dependencies — librosa and pretty_midi — and a processing step that loads the full audio a second time. On a free-tier CPU Space that's already slow, this adds overhead without producing any measurable benefit. If the fix doesn't improve results, it's just dead weight in the pipeline.
+
+## What I Need Peer Feedback On
+I don't know why the fix didn't work. My best guess is that the rhythm problem isn't actually in the tempo information — it might be in how Basic Pitch represents note durations in the MIDI before the tempo is even relevant, or in how music21 quantizes regardless of what BPM is written in the file. I need feedback on: (1) whether tempo correction via pretty_midi actually affects how music21 quantizes, or whether quantization is purely relative and BPM doesn't matter; and (2) what the actual next move is — is there a different place in the pipeline where rhythm is being lost?
