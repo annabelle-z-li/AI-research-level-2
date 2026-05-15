@@ -41,8 +41,13 @@ This question came out of firsthand observation: after building a music transcri
 
 | File | Description |
 |------|-------------|
+| `PAPER.md` | Research brief: what the pipeline outputs, why it fails, and what that means for accessibility and usability |
 | `research-journal.md` | Running log of Spaces explored, models tested, Spaces built, and weekly reflections |
-| `week-6-research-question.md` | Deep dive into the Week 6 research question: how it was developed using Claude, what the three candidate questions were, and why the final version was chosen |
+| `paper-starter.md` | Early draft notes and outline for the research brief |
+| `week-06-research-question.md` | Deep dive into the Week 6 research question: how it was developed, the three candidate questions, and why the final version was chosen |
+| `week-07-source-search.md` | Source shortlist with extracts, inclusion/exclusion record, and reflection |
+| `week-08-paper-read.md` | Close reading of Bereket & Shi (2017): field, terms, methods, and what to cite |
+| `week-09-citations.md` | Verified citations for all four sources used in the brief, with claim-level evidence and peer-review status |
 
 ---
 
@@ -71,7 +76,7 @@ This question came out of firsthand observation: after building a music transcri
 ## Spaces Built
 
 ### [Dino Fact Explorer](https://huggingface.co/spaces/annabelle-li/dino-fact-explorers-fa8or)
-Built using DeepSite vibe coding. Clicking a button returns a random dinosaur fact. Learned that the "facts" were actually 25 hardcoded strings in `script.js`, and that the majority of the code was actually CSS animations (bounce, float, shake).
+Built using DeepSite vibe coding. Clicking a button returns a random dinosaur fact. Learned that the "facts" were actually 25 hardcoded strings in `script.js`, and that the majority of the code was CSS animations (bounce, float, shake).
 
 ### [Dictionary](https://huggingface.co/spaces/annabelle-li/dictionary)
 A simple lookup app built with Gradio. Spent a long time debugging before realizing the issue was missing `import gradio as gr` and `import requests`. Lesson: read the source material first.
@@ -86,10 +91,10 @@ Key bug fixed: the model was loading but generating nothing, because the prompt 
 
 **Finding:** High temperature improved aria lyrics but destroyed chord progressions (generated nonexistent chords).
 
-### [Music to Sheet Music](https://huggingface.co/spaces/annabelle-li/music-transcription) *(Research Space)*
-The central research artifact. Takes audio input (file upload or microphone) and transcribes it to sheet music, outputting MIDI, MusicXML, and an inline SVG score via LilyPond.
+### [Music to Sheet Music](https://huggingface.co/spaces/annabelle-li/music-to-sheet-music) *(Primary Research Space)*
+The central research artifact. Takes audio input (file upload or microphone) and transcribes it to sheet music, outputting MIDI, MusicXML, and an inline SVG score via LilyPond. Also runs an AI analysis of the transcription via Groq.
 
-**Tech stack:** `basic_pitch` (Spotify) → `music21` → LilyPond
+**Tech stack:** `basic_pitch` (Spotify) → `librosa` beat tracking → `music21` → LilyPond
 
 **Finding:** Output was broadly inaccurate across all dimensions simultaneously — wrong pitches, wrong clef, wrong rhythms, wrong time signature. This is a cascade of compounding errors across three pipeline stages, documented in detail in `research-journal.md`.
 
@@ -102,7 +107,12 @@ The central research artifact. Takes audio input (file upload or microphone) and
 | Wrong rhythms | Both | No beat tracking; coarse quantization grid |
 | Wrong time signature | `music21` | No meter detection in pipeline |
 
-**What's missing:** Beat tracking (e.g., `librosa.beat.beat_track`) and meter detection before quantization.
+**Week 10 update:** Added `librosa.beat.beat_track()` to detect BPM from audio and write it into the MIDI via `pretty_midi` before quantization. Rhythm output on the C major scale test did not change — the failure appears to be upstream of tempo correction, likely in how Basic Pitch encodes note durations before meter is relevant.
+
+### [AMT Report Card](https://huggingface.co/spaces/annabelle-li/amt-report-card) *(Research Tool)*
+Scores an AI music transcription against a reference MIDI across four dimensions — pitch, timing, rhythm, and dynamics — then asks an LLM to review the results like a musician would. Includes three built-in examples (C major scale, Twinkle Twinkle Little Star, Minuet in G) that reproduce the tests from the research brief. Also includes the beat tracking fix applied to the hypothesis MIDI before scoring.
+
+**Tech stack:** `basic_pitch` → `librosa` beat tracking → `music21` → Groq (LLaMA 3.3 70B) → radar chart + scorecard UI
 
 ---
 
@@ -113,12 +123,16 @@ The central research artifact. Takes audio input (file upload or microphone) and
 | 4 | Classification vs. Generation | Classification needs labeled data and is more constrained; generation is more flexible but less grounded — DistilGPT would ramble about eggs when given a math problem about eggs |
 | 5 | Adding Controls | Built the Opera & Jazz Space; learned that instruct models require `apply_chat_template` or they don't recognize the input as a prompt at all |
 | 6 | Research Question | Shifted focus from text generation to transcription; developed a research question about AMT accuracy constraints and what they mean for real musicians |
+| 7 | Source Search | Found four sources directly supporting the research question; Benetos et al. (2019) gave the clearest academic framing for the MIDI-to-notation gap |
+| 8 | Paper Read | Close reading of Bereket & Shi (2017); the note-fading artifact (model truncates note durations because piano audio fades before the MIDI ground truth ends) is the most citable finding |
+| 9 | Citations & Testing | All four sources survived verification; tested AMT Report Card on three examples — C major scale got pitch right but rhythm wrong; Twinkle and Minuet failed across all dimensions |
+| 10 | The Wall and the Move | Added librosa beat tracking to fix rhythm errors; the fix ran without errors but produced no change in output — the failure is upstream of tempo correction |
 
 ---
 
 ## What's Next
 
-- **AMT Accuracy Tester Space** — upload a test audio clip and a reference MIDI, run Basic Pitch automatically, and compare output against ground truth across four dimensions: pitch (% correct), timing (average onset error in ms), rhythm (duration match), and dynamics (whether soft notes were dropped)
+- Determine why beat tracking didn't improve rhythm output — whether the issue is in how Basic Pitch encodes note durations or in how music21 quantizes regardless of BPM
 - Instrument comparison Space (piano vs. guitar vs. voice)
 - Compute tradeoff Space (Basic Pitch vs. a heavier model on the same clip)
 - Lead sheet / chord chart generation from transcription output
@@ -127,8 +141,11 @@ The central research artifact. Takes audio input (file upload or microphone) and
 
 ## References
 
-- Bitteur et al., *basic_pitch* — https://github.com/spotify/basic-pitch
-- Cuthbert & Ariza, *music21* — https://web.mit.edu/music21/
-- McFee et al., *librosa* — https://librosa.org
-- Kong et al., *High-resolution Piano Transcription with Pedals by Regressing Onset and Offset Times* (2021)
-- AI Music Transcription survey — https://arxiv.org/html/2603.27528v1
+- Bittner, R. M., Bosch, J. J., Rubinstein, D., Meseguer-Brocal, G., & Ewert, S. (2022). A lightweight instrument-agnostic model for polyphonic note transcription and multipitch estimation. *ICASSP 2022*. https://github.com/spotify/basic-pitch
+- Jamshidi, F., Pike, G., Das, A., & Chapman, R. (2024). Machine learning techniques in automatic music transcription: A systematic survey. *arXiv:2406.15249*. https://arxiv.org/abs/2406.15249
+- Gardner, J., Simon, I., Manilow, E., Hawthorne, C., & Engel, J. (2022). MT3: Multi-task multitrack music transcription. *ICLR 2022*. https://arxiv.org/abs/2111.03017
+- Bereket, M., & Shi, K. (2017). An AI approach to automatic natural music transcription. *Stanford CS229*. https://cs229.stanford.edu/proj2017/final-reports/5244388.pdf
+- Benetos, E., Dixon, S., Giannoulis, D., Kirchhoff, H., & Klapuri, A. (2013). Automatic music transcription: Challenges and future directions. *Journal of Intelligent Information Systems, 41*(3), 407–434. https://doi.org/10.1007/s10844-013-0258-3
+- Benetos, E., Dixon, S., Duan, Z., & Ewert, S. (2019). Automatic music transcription: An overview. *IEEE Signal Processing Magazine, 36*(1), 20–30. https://doi.org/10.1109/MSP.2018.2869928
+- Cuthbert, M. S., & Ariza, C. music21. https://web.mit.edu/music21/
+- McFee, B. et al. librosa. https://librosa.org
