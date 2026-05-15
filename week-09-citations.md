@@ -81,4 +81,4 @@ Benetos, E., Dixon, S., Duan, Z., & Ewert, S. (2019). Automatic music transcript
 
 ## Reflection
 
-All four Week 7 sources are carried forward into this citation file and none were dropped at the formatting stage. But one source from the Week 7 near-miss list — the 2024 MT3 follow-up (YourMT3+) — may be worth revisiting if I need a more current reference for the state-of-the-art gap argument, but only if I can verify the claim and find the supporting passage.
+All four Week 7 sources are carried forward into this citation file and none were dropped at the formatting stage. But one source from the Week 7 near-miss list, the 2024 MT3 follow-up (YourMT3+), may be worth revisiting if I need a more current reference for the state-of-the-art gap argument, but only if I can verify the claim and find the supporting passage.
