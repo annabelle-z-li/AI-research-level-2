@@ -295,6 +295,10 @@ tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
 - After generating the score, prompt an LLM with the MusicXML and ask it to detect and correct obvious errors
 - Experimental but potentially powerful for a Space already in the HuggingFace/AI ecosystem
 
+### Fix 6 — Use simpler audio files (very low effort)
+- Using simpler monophonic audio files (like a c-major scale) will allow me to see where the AI is going wrong from the foundation
+- Find one online or possibly make one on my own in a music creating software like MuseScore
+
 ---
 
 ## Notes for Future Iterations
@@ -302,7 +306,7 @@ tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
 - `basic_pitch` was never designed to be a full automatic music transcription (AMT) system — it is a pitch detection tool. The current Space is asking it to do more than it was built for.
 - The free-tier CPU constraint rules out the most accurate models, which are GPU-dependent.
 - A realistic quality ceiling on CPU with current open-source tools is: accurate pitch detection on clean, monophonic, sustained-note audio (e.g., a simple vocal melody, a whistled tune, a single flute line). Anything more complex will require GPU resources or a commercial API.
-
+- the audio files I have been using might have been too complicated. I mostly used piano covers online, which are polyphonic and might stress the ai too much. I think next time I will try to find a very simple audio file (maybe just a c-major scale) and start from the basics to see where these tools went wrong.
 ---
 
 ## References
