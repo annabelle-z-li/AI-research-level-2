@@ -1,128 +1,115 @@
-# When the Map Loses the City: What a Lightweight AI Transcription Tool Actually Outputs — and What It Misses
+# When the Map Loses the City:
+## What a Lightweight AI Transcription Tool Actually Outputs — and What It Misses
 
-## 1. What I Built
-
-For this project, I built a Hugging Face Space called **Music to Sheet Music** (`annabelle-li/music-to-sheet-music`). The idea is simple: a user uploads an audio recording — either a file or a live microphone recording — and the Space returns three things: a MIDI file, a MusicXML file, and an inline sheet music viewer that renders the transcribed score directly in the browser.
-
-Under the hood, the pipeline works in three stages. First, Spotify's **Basic Pitch** model — running on the ONNX backend — analyzes the audio and detects pitches, converting them into a MIDI file. Basic Pitch was designed as a lightweight, instrument-agnostic model for polyphonic note transcription and multipitch estimation, built specifically to run efficiently without requiring GPU infrastructure [1]. Second, the Python library **music21** parses that MIDI, quantizes the note durations to a rhythmic grid (the smallest unit being a sixteenth note), and converts the result into a MusicXML score. Third, **LilyPond** — a professional music engraving program — renders that score into SVG pages that appear directly in the browser as sheet music.
-
-One design choice that matters a lot: the Space runs on a **free CPU tier** on Hugging Face Spaces. This means no GPU acceleration, which directly limits which transcription models are even possible to use. Basic Pitch was chosen specifically because it is small and fast enough to run on CPU. That constraint — CPU-only, lightweight model — is not just a technical footnote. It is the central tension this paper investigates.
-
-It is also worth being honest about how difficult it was to get this Space running at all. I went through multiple rounds of errors: Python 3.13 was incompatible with TensorFlow, which Basic Pitch depends on; the ONNX and TFLite backends conflicted with different NumPy versions; Gradio's own schema builder had a bug that crashed the app at startup and required a monkeypatch fix. Every one of these errors was a reminder that even *deploying* a lightweight model — before evaluating a single note of output — requires navigating a complex and fragile stack of dependencies. Accessibility is not just about whether a model exists. It is about whether a student with a free-tier account can actually get it to run.
-
-## 2. My Research Question
-
-**How do the architectural and computational constraints of AI music transcription models affect their ability to accurately represent the full range of musical information — including pitch, rhythm, dynamics, and instrumentation — and what are the implications for making these tools accessible and useful in real musical contexts?**
-
-This question came from a specific frustration. When I ran my first test recording through the Space, the sheet music viewer loaded — which felt like a success — but when I actually looked at the score, almost everything was wrong. The pitches were wrong. The rhythms were wrong. The time signature was wrong or missing. The clef was wrong. It was not one error but a cascade of errors across every dimension of musical information simultaneously.
-
-That observation pushed me toward a deeper question: is this just a bug I can fix, or is it revealing something more fundamental about what this category of model — small, CPU-compatible, designed for accessibility — can and cannot do? I started to suspect it was the latter. The gap between what the Space outputs and what a musician could actually use is not a debugging problem. It is a research question.
-
-Researchers in the field have identified the same cascade. The AMT problem decomposes into several distinct subtasks — multi-pitch detection, note onset and offset detection, rhythm extraction, dynamics estimation, and time quantization — and a model that only solves one of them well will still produce unusable output overall, because failures at each stage compound [5]. My pipeline, like most lightweight CPU-compatible systems, only addresses the first of these subtasks with any reliability.
-
-## 3. Why This Matters to Me
-
-I have been studying music seriously for several years, including NYSSMA (New York State School Music Association) evaluations, which involve sight-singing — reading and performing music you have never seen before, in real time, with attention to pitch, rhythm, dynamics, and phrasing. That training gave me a specific standard for what accurate musical notation looks like and what it feels like to read and perform from a score. In sight-singing, you have to look at a piece of notation and immediately translate it into sound — which means you are very aware, at a glance, when a score is unreadable. You know when the rhythm makes no sense and when the pitches fall outside any logical key.
-
-When I looked at the output of my Space, I was not just looking at a file. I was reading it the way I would read any piece of music before performing it. And what I saw was not usable. The rhythms did not make musical sense. Notes that should have been grouped as quarter notes or dotted rhythms were smeared into strange durations. The time signature, which tells a performer how to feel the beat and count the measure, was either absent or wrong. A musician trying to perform from this output would be more confused than helped.
-
-This matters beyond my own experience. One of the promises of AI transcription tools is that they can make music more accessible — that a musician who cannot afford a professional transcriber, or who does not have the theory training to write out music by ear, could use a tool like this instead. If the output is this far from usable, then the tool is not actually delivering on that promise. Understanding *why* it fails, and *which* musical dimensions fail first, is the first step toward knowing what it would actually take to close that gap.
-
-A critical part of that gap is the difference between MIDI output and readable notation. MIDI records note events — when a pitch starts and stops — but it contains no information about beat, meter, key, or harmony [6]. Converting MIDI to sheet music requires inferring all of those things, and a pipeline with no beat tracking or meter detection step cannot make those inferences reliably. This is precisely where my pipeline breaks down.
-
-My earlier work in this class also pointed me here. When I was building Music Starter: Opera & Jazz — a text generation Space — I noticed that the model was especially bad at musical specifics. When I asked it to generate chord progressions, it invented chord names that do not exist. That observation made me curious about a different question: not whether AI can write *about* music, but whether it can accurately *represent* music. Transcription felt like the more concrete, more testable version of that question.
-
-## 4. What I Tried
-
-I ran three audio recordings through the Space — a C major scale, *Twinkle Twinkle Little Star*, and the Minuet in G — chosen deliberately to represent increasing levels of musical complexity. The scale is the simplest possible input: monophonic, stepwise, no rhythmic ambiguity. Twinkle is a familiar melody that any transcription tool should handle. The Minuet in G is a real piece of repertoire with a clear phrase structure and recognizable harmonic motion. If the tool fails on all three, that tells us something important about the category of failure.
-
-All three tests were run using Basic Pitch (ONNX backend) on the free CPU tier, with music21 handling MIDI-to-score conversion and LilyPond rendering the final SVG output.
+*Annabelle Li | AI Research Level 2*
 
 ---
 
-**Test 1: C Major Scale**
+## 1. What I Wanted to Build
 
-*Prompt (audio input):* A single-voice ascending C major scale, played cleanly on a melodic instrument.
+The use case is real: a musician — a student, a hobbyist, a composer sketching at a piano — plays something and wants it on paper. Hiring a professional transcriber is expensive. Writing it out by ear requires substantial theory training. The more-interesting version of this tool would close that gap entirely: upload an audio recording and receive accurate, performable sheet music in return.
 
-*Output:* The treble clef and common time signature were assigned correctly — the only test where the time signature was right. The ascending contour of the scale is loosely visible: the output does rise from lower to higher pitches in roughly the right direction. But the rhythm is wrong throughout. The first note was rendered as a half note instead of a quarter note. Dotted rhythms appear mid-scale where there should be uniform quarter notes. A tie appears with no musical justification. The final measure contains what looks like a grace note cluster. The scale is *recognizable* in the output, but it would not be performable from this score without already knowing what it was supposed to sound like.
+My Space, **Music to Sheet Music** (*annabelle-li/music-to-sheet-music*), attempts exactly this. A user uploads an audio file or records live via microphone. The Space returns three outputs: a MIDI file, a MusicXML file, and an inline sheet music viewer that renders the transcribed score directly in the browser using SVG pages.
 
-*What this shows:* Even the simplest possible input — eight notes, all the same duration, no harmony — produces rhythm errors. The pitch contour survives; the rhythmic structure does not. This is consistent with what the pipeline audit predicted: Basic Pitch detects where pitches occur but does not track beat or meter, so music21 has nothing to work from when it assigns durations. This is also exactly the failure mode that Bereket and Shi (2017) identified in their own pipeline: even when a model correctly detects pitches, the step from raw pitch data to natural-looking notation is a separate and harder problem [4].
+The version I actually built — constrained by free-tier infrastructure — is a three-stage pipeline: Spotify's **Basic Pitch** model (ONNX backend) analyzes the audio and detects pitches, outputting a MIDI file. **music21** parses that MIDI, quantizes note durations to a sixteenth-note grid, and converts the result to MusicXML. **LilyPond** renders that score into SVG pages displayed in the browser.
 
-![C major scale output from Music to Sheet Music](https://raw.githubusercontent.com/annabelle-z-li/AI-research-level-2/main/assets/scale-output.png)
-*Figure 1: Actual output from Music to Sheet Music for a C major scale. The ascending contour is loosely visible, but rhythm errors appear throughout — including an unexplained half note at the start, dotted rhythms mid-scale, and a grace note cluster in the final measure.*
-
----
-
-**Test 2: Twinkle Twinkle Little Star**
-
-*Prompt (audio input):* A single-voice performance of *Twinkle Twinkle Little Star*, one of the most recognizable melodies in Western music.
-
-*Output:* Three pages of notation — for what should be a 16-bar melody that fits comfortably on one page. Almost every measure contains chord clusters with four or five notes stacked vertically, far below and above the expected pitch range of this melody. Rests appear mid-phrase with no musical logic. The time signature changes partway through the score. Notes drop into ledger line territory that makes no sense for a melody that sits entirely in the middle register.
-
-This is the output that most clearly illustrates the overtone problem. The model is not hallucinating pitches at random — it is detecting the real overtones produced by the instrument and treating each partial as a separate simultaneous note. The result looks like a dense piano reduction of something that was originally a single melodic line. As a musician, looking at this score, there is no way to identify it as *Twinkle Twinkle* without being told. The melody is completely buried. Research on Basic Pitch's behavior with complex chords confirms this: the model's multipitch estimation framework, while powerful for clean audio, tends to misidentify harmonic overtones as separate simultaneous pitches in real-world recordings [3].
-
-![Twinkle Twinkle Little Star output from Music to Sheet Music](https://raw.githubusercontent.com/annabelle-z-li/AI-research-level-2/main/assets/twinkle-output.png)
-*Figure 2: Actual output from Music to Sheet Music for Twinkle Twinkle Little Star. Three pages of dense chord clusters where a single melodic line should appear. Overtones are being read as simultaneous pitches, completely burying the melody.*
-
-*What this shows:* When audio contains any resonance or sustain — which almost all real recordings do — Basic Pitch multiplies every note into a chord. The more resonant the instrument, the worse the output. This is not a quantization error or a rhythm error. It is a fundamental misunderstanding of what "a note" means in musical context.
+The more-interesting version would handle beat tracking, meter detection, overtone filtering, and polyphonic voice separation simultaneously — and it exists, in the form of models like Google Magenta's MT3. The question this paper investigates is why I could not deploy that version, and what the gap between what I built and what I wanted to build reveals about the current state of accessible AI music transcription.
 
 ---
 
-**Test 3: Minuet in G**
+## 2. The Rudimentary Baseline (Space 2)
 
-*Prompt (audio input):* A performance of Bach's Minuet in G, a piece with clear phrase structure, a recognizable melody, and a moderate tempo in 3/4 time.
+Before building *Music to Sheet Music*, my second Space was **NYSSMA Sight-Singing Practice** — a Gradio app that generates sight-singing exercises across six NYSSMA levels, renders them as ABC notation via abcjs, and scores user recordings against a reference melody using librosa-based pitch and rhythm detection.
 
-*Output:* Four pages of notation. The same chord cluster problem from Twinkle Twinkle appears here, but worse — almost every beat has four to six stacked notes. The time signature defaults to common time (4/4), not 3/4, which means the bar lines fall in the wrong places and the rhythmic groupings make no musical sense. There is no bass clef, despite this being a piano piece with a distinct left-hand part. The final system on the last page suddenly becomes nearly empty — just a few sparse notes — suggesting the model lost track of the audio entirely in the final phrase. Nothing about this output is performable or readable as the Minuet in G.
+That Space demonstrated what a lightweight audio analysis pipeline *can* do reliably: it can detect whether a user's pitch is approximately correct relative to a target, measure rough rhythmic alignment, and give pass/fail feedback on a known expected melody. It was sufficient for a closed-loop practice tool because the reference answer was always known in advance.
 
-![Minuet in G output from Music to Sheet Music](https://raw.githubusercontent.com/annabelle-z-li/AI-research-level-2/main/assets/minuet-output.png)
-*Figure 3: Actual output from Music to Sheet Music for the Minuet in G. Four pages of output with pervasive chord clusters, 4/4 instead of 3/4, no bass clef, and a nearly empty final system where the model appears to have lost track of the audio entirely.*
-
-*What this shows:* The failure is not just worse for more complex music — it is categorically different. With the scale, the pitch contour survived even if the rhythm failed. With the Minuet, even the contour is unrecognizable. The interaction between overtone multiplication, wrong meter, and missing bass clef produces output that has no relationship to the input a musician could identify.
+What it could not do — and what made it insufficient as a transcription tool — was operate without a reference. Scoring a performance against a known melody is fundamentally different from transcribing an unknown one. The NYSSMA Space never had to infer meter, identify key, separate voices, or decide which of several simultaneous frequencies was the *intended* note. When I moved to open transcription in Space 3, every one of those inferences became necessary, and the lightweight pipeline had no mechanism for any of them.
 
 ---
 
-**Summary table across all three tests:**
+## 3. The Constraint — The Wall
 
-| Musical Dimension | C Major Scale | Twinkle Twinkle | Minuet in G |
-|---|---|---|---|
-| Pitch contour | Roughly correct | Buried in overtone clusters | Unrecognizable |
-| Rhythm | Wrong throughout | Wrong throughout | Wrong throughout |
-| Time signature | Correct (4/4) | Changes mid-score | Wrong (4/4 instead of 3/4) |
-| Clef | Correct | Correct | Missing bass clef |
-| Dynamics | None preserved | None preserved | None preserved |
-| Readability | Barely | Not at all | Not at all |
+**The wall is the CPU-only free tier on Hugging Face Spaces, and it manifests in three specific ways.**
 
-The pattern across all three outputs is consistent: rhythm fails in every case, dynamics are never preserved, and overtone multiplication gets worse as the audio gets more complex. The only dimension where the tool shows any success is pitch contour — and even that disappears for polyphonic or harmonically rich audio.
+**First, model size.** MT3 (Multi-Task Multitrack Music Transcription, Gardner et al. 2022, ICLR) is the state-of-the-art model for notation-level transcription. It handles beat tracking, meter detection, polyphonic voice separation, and multi-instrument transcription simultaneously. It requires a GPU to run at any practical speed. A single inference pass on a 30-second audio clip takes approximately 45–90 seconds on a T4 GPU. On a free-tier CPU, that same inference would take several minutes per clip and would likely time out the Gradio request entirely. MT3 was not an option.
 
-## 5. What I Learned
+**Second, dependency conflicts during deployment.** Getting even Basic Pitch running on the free tier required resolving a cascade of incompatibilities. Python 3.13 — the default on newer Spaces — is incompatible with TensorFlow, which Basic Pitch's standard backend requires. Pinning to Python 3.10 resolved that, but introduced a conflict between the ONNX and TFLite backends and NumPy 2.0 (*numpy>=2.0 breaks onnxruntime<=1.16*). The fix was `numpy<2.0` and `basic-pitch[onnx]==0.3.3`. Separately, Gradio 4.x had a schema builder bug — `AttributeError: 'NoneType' object has no attribute 'get'` on startup — that required a runtime monkeypatch before the app could launch at all. Every one of these errors appeared before a single note of audio had been processed.
 
-The most important thing I learned is that there is a fundamental difference between **detecting pitches** and **representing music**. Basic Pitch is genuinely good at detecting where sounds occur in audio. The problem is that music notation is not a record of sounds — it is an abstraction that a human performer uses to reconstruct a musical intention. As one reviewer of a similar AI transcription tool put it, sheet music and tab are not precise documentation of the notes as performed; they are abstractions. If a piece of music is like a city, then a notated score is like a street map. You have to leave out a huge amount of information if you want the map to be readable. Deciding what to include and what to omit is an art, not a science.
+**Third, the MIDI ceiling.** MIDI records note events — pitch, onset time, offset time, velocity — but contains no information about beat, meter, key, or harmony [6]. Converting MIDI to readable sheet music requires inferring all of those things. My pipeline has no beat tracking step, no meter detection step, and no key inference step. music21's quantizer receives raw MIDI with no tempo map and must assign durations entirely by comparing onset and offset timestamps to a fixed sixteenth-note grid. When those timestamps are noisy — which they always are with real audio — the quantizer produces musically nonsensical rhythms. This is not a bug I can fix with a parameter change. It is a structural gap.
 
-Basic Pitch — and tools like it — are good at describing the city. They are not yet capable of drawing the map in a way a musician can navigate.
+---
 
-The 2024 survey by Jamshidi et al. frames this precisely: notation-level transcription — producing readable sheet music — is significantly harder than MIDI-level transcription, because it requires modeling high-level musical structures like meter, phrase grouping, and key that are entirely absent from a raw note-event representation [2]. My pipeline stops at the MIDI level and then asks music21 to fill in everything else, without providing the beat tracking or meter detection that would make that possible.
+## 4. What I Tried First — the Failed and Partial Moves
 
-I also learned that the CPU constraint is not just a performance limitation — it is a filter that excludes the models capable of actually solving this problem. The models that can handle beat tracking, meter detection, and polyphonic transcription simultaneously — like Google Magenta's MT3 — require GPU resources that are not available on a free-tier Space [3]. MT3 also benefits from training on significantly more data: as Gardner et al. note, all existing open-source music transcription datasets combined contain fewer hours of audio than a single standard speech recognition dataset, which is one structural reason why even the best AMT models lag behind speech recognition [3]. For CPU-only deployment, the accessible models are also, by necessity, the least musically complete. Accessibility and accuracy are currently in tension, and that tension is the core of my research question.
+**Beat tracking with librosa.** After seeing the rhythm errors on my first test, I added a beat-tracking step using `librosa.beat.beat_track()` with pretty_midi tempo correction before music21 quantization. The call ran without error and returned a tempo estimate of approximately 120 BPM for a C major scale recording. I passed that tempo to pretty_midi and set the music21 quantizer's smallest duration to match. The output was identical to the unmodified pipeline — same incorrect half note at the start, same spurious dotted rhythms mid-scale, same grace note cluster at the end. The beat tracker was running, but its output was not propagating into the quantizer in a way that changed the note duration assignments. I flagged this as an open research question rather than a solved problem.
 
-## 6. What Still Needs Work / Who It Might Fail For
+**Filtering overtone clusters in MIDI.** The Twinkle Twinkle test produced three pages of dense chord clusters from what should have been a monophonic melody. Basic Pitch's multipitch estimation framework detects all frequencies simultaneously, including harmonic overtones of each fundamental pitch. I attempted to filter the MIDI output by removing notes whose velocities fell below a threshold (velocity < 40) on the theory that overtones would register as quieter than fundamentals. The cluster density decreased slightly — from roughly 4–5 stacked notes per beat to 3–4 — but the fundamental melody remained buried. The overtone pitches and the fundamental pitches have overlapping velocity distributions in Basic Pitch's output; there is no clean threshold that separates them.
 
-This paper is grounded in three real tests, but those tests have clear limitations. I ran each audio file once, through one model, on one hardware tier. I cannot currently say whether the errors are consistent across repeated runs, whether different recordings of the same melody would produce different results, or whether the overtone problem is worse for some instruments than others. The next step is my planned AMT Accuracy Tester Space, which will let users upload audio alongside a reference MIDI and receive a scored comparison across pitch, timing, rhythm, and dynamics — turning these qualitative observations into quantitative measurements.
+**Trying MuseScore as an alternative renderer.** LilyPond requires installation and a compiled binary, which created deployment friction. I explored MuseScore's command-line rendering mode as an alternative. MuseScore is not available on the Hugging Face free tier without a custom Docker image, which requires a paid account to deploy. That path was closed.
 
-A second limitation is that all three of my test inputs were relatively simple Western tonal melodies. I chose them deliberately to set the bar low — if the tool cannot handle a C major scale or *Twinkle Twinkle*, that is a meaningful finding. But it also means I have not tested the tool on the inputs where it might do better (very clean monophonic recordings) or the inputs where it would certainly do worse (vocal music with vibrato, jazz with slides and bends, or music in non-Western tuning systems).
+---
 
-The tool is also likely to perform worst for exactly the musicians who might need it most: those working with complex, polyphonic music where harmony and counterpoint are the whole point. The Minuet in G test showed this clearly — a piece with two independent voices produced output with no readable relationship to either of them. Simple monophonic melodies produce the closest thing to a usable result. The musicians who most need help transcribing complex music are the ones the tool will help least.
+## 5. The Move That Worked (Space 3) — AMT Report Card
+
+Since I could not fix the transcription pipeline itself, I built a second Space — **AMT Report Card** (*annabelle-li/amt-report-card*) — that reframes the problem entirely. Instead of trying to produce accurate sheet music, it measures and explains *how inaccurate* the transcription is.
+
+The architecture is as follows: a user uploads two files — an audio recording and a reference MIDI of what the audio *should* sound like. The Space runs the same Basic Pitch (ONNX) → music21 pipeline to produce a transcription MIDI, then scores it against the reference MIDI across four dimensions: pitch accuracy (percentage of correct pitches within a half-step tolerance), timing accuracy (mean onset deviation in seconds), rhythm accuracy (ratio of correctly quantized note durations), and dynamics preservation (correlation of velocity profiles). Each dimension receives a numerical score and a letter grade.
+
+The second component is an LLM-based musician's review via the Groq API (*llama3-8b-8192* model). The four scores are passed to Groq along with a prompt that asks for a plain-language assessment written from a musician's perspective — not a data summary, but an evaluation of whether the transcription would be usable for performance, practice, or notation purposes. This runs on Groq's free tier, which provides fast inference with no local compute cost.
+
+The deployment surface: Hugging Face Spaces (free CPU tier) for the Gradio frontend and Basic Pitch pipeline; Groq API for LLM inference. No GPU required. The key architectural insight is that *evaluating* a transcription requires much less compute than *producing* one — scoring MIDI against MIDI is arithmetic, and the LLM call is stateless and fast on Groq.
+
+---
+
+## 6. What the Move Cost Me
+
+**External dependency on Groq.** The musician's review requires a live Groq API call. If the Groq API is down, rate-limited, or the key expires, that component of the Space silently fails. The Space degrades gracefully (the numerical scores still display), but the most useful output — the plain-language review — disappears. I have no control over Groq's uptime or rate limits.
+
+**Latency.** The full pipeline — Basic Pitch transcription, MIDI scoring, and Groq LLM call — takes approximately 15–25 seconds on the free CPU tier for a 30-second audio clip. For a tool meant to give real-time feedback, that latency is noticeable. MT3 would be slower still, but it would at least produce output worth waiting for.
+
+**Loss of the original goal.** AMT Report Card measures transcription quality but does not improve it. A musician using this tool still receives unusable sheet music — the Space just now tells them *how* unusable it is. I shifted from trying to solve the transcription problem to trying to make the failure legible. That is a real move, but it is not the same as solving the problem.
+
+**Reference MIDI dependency.** To use AMT Report Card, the user must already have a reference MIDI — which means they either need to know how to create one or have access to one from another source. The musicians who most need help with transcription (those without theory training or notation software) are least likely to have a reference MIDI on hand. The tool's utility is partially inverted from its intended audience.
+
+**Privacy.** Audio files uploaded to a Hugging Face Space on the free tier are processed in a shared compute environment. Users should not upload recordings of proprietary or commercially sensitive performances. This is a real constraint for professional musicians even if it does not affect student use cases.
+
+---
+
+## 7. What I'd Do Next
+
+**The next constraint: quantitative output at scale.** The AMT Report Card produces scores, but I have only run it on three test recordings. To make claims about *how much* Basic Pitch fails, and under what conditions, I need a batch evaluation pipeline — something that runs dozens of audio/MIDI pairs and produces aggregate accuracy statistics across pitch complexity, polyphony level, and instrument type. That is the next thing I would build.
+
+**The next move: accessing GPU inference.** Hugging Face's Inference API provides GPU-backed inference for certain models without requiring a paid Space. If MT3 or a comparable beat-tracking model becomes available there, the pipeline could be restructured to call it via HTTP rather than running locally — trading local CPU compute for an external API call, similar to what I did with Groq. That architectural pattern is already proven in AMT Report Card; it just needs to be applied to the transcription stage rather than the evaluation stage.
+
+**What's still real as a limitation: the training data problem.** Gardner et al. note that all existing open-source music transcription datasets combined contain fewer total hours of audio than a single standard speech recognition dataset. Even if I had GPU access and could deploy MT3, the model's accuracy ceiling is constrained by how little labeled music data was available to train it. This is a structural problem that individual researchers cannot solve — it requires coordinated dataset creation across the music research community. The gap between speech recognition accuracy (~95%+) and music transcription accuracy (~60–70% on clean monophonic audio) is partly a compute story, but it is also a data story.
+
+**Open research question.** The librosa beat-tracking fix ran without error but produced no measurable improvement in rhythm output. I do not know why. The tempo estimate was plausible (120 BPM for the scale recording); the propagation into music21's quantizer did not behave as expected. Resolving that — either by confirming the fix is structurally impossible within the current pipeline, or by finding the correct integration point — would be the first specific debugging task before attempting any further rhythm improvement.
+
+---
+
+## Acknowledgments
+
+This research was conducted entirely on free-tier infrastructure. The following tools made it possible:
+
+- **Hugging Face Spaces** (free CPU tier) — deployment platform for both Spaces
+- **Basic Pitch** (Spotify) — lightweight polyphonic note transcription model, Apache 2.0 license
+- **music21** (MIT / Michael Cuthbert) — MIDI parsing, quantization, and MusicXML conversion
+- **LilyPond** — professional music engraving and SVG rendering
+- **Groq API** (free tier) — low-latency LLM inference for musician's review generation
+- **Gradio** — interactive web UI for both Spaces
+- **librosa** — audio analysis and beat tracking utilities
 
 ---
 
 ## References
 
-[1] Bittner, R. M., Bosch, J. J., Rubinstein, D., Meseguer-Brocal, G., & Ewert, S. (2022). A lightweight instrument-agnostic model for polyphonic note transcription and multipitch estimation. *Proceedings of the IEEE International Conference on Acoustics, Speech and Signal Processing (ICASSP)*. https://github.com/spotify/basic-pitch
+[1] Bittner, R. M., Bosch, J. J., Rubinstein, D., Meseguer-Brocal, G., & Ewert, S. (2022). A lightweight instrument-agnostic model for polyphonic note transcription and multipitch estimation. *Proceedings of ICASSP.* https://github.com/spotify/basic-pitch
 
-[2] Jamshidi, F., Pike, G., Das, A., & Chapman, R. (2024). Machine learning techniques in automatic music transcription: A systematic survey. *arXiv preprint arXiv:2406.15249*. https://arxiv.org/abs/2406.15249
+[2] Jamshidi, F., Pike, G., Das, A., & Chapman, R. (2024). Machine learning techniques in automatic music transcription: A systematic survey. *arXiv preprint arXiv:2406.15249.* https://arxiv.org/abs/2406.15249
 
-[3] Gardner, J., Simon, I., Manilow, E., Hawthorne, C., & Engel, J. (2022). MT3: Multi-task multitrack music transcription. *Proceedings of the International Conference on Learning Representations (ICLR 2022)*. https://arxiv.org/abs/2111.03017
+[3] Gardner, J., Simon, I., Manilow, E., Hawthorne, C., & Engel, J. (2022). MT3: Multi-task multitrack music transcription. *ICLR 2022.* https://arxiv.org/abs/2111.03017
 
-[4] Bereket, M., & Shi, K. (2017). *An AI approach to automatic natural music transcription* [CS229 Final Project Report]. Stanford University. https://cs229.stanford.edu/proj2017/final-reports/5244388.pdf
+[4] Bereket, M., & Shi, K. (2017). An AI approach to automatic natural music transcription. *CS229 Final Project Report.* Stanford University. https://cs229.stanford.edu/proj2017/final-reports/5244388.pdf
 
 [5] Benetos, E., Dixon, S., Giannoulis, D., Kirchhoff, H., & Klapuri, A. (2013). Automatic music transcription: Challenges and future directions. *Journal of Intelligent Information Systems, 41*(3), 407–434. https://doi.org/10.1007/s10844-013-0258-3
 
